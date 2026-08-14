@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import csv
 from collections import defaultdict
+from datetime import date
 from pathlib import Path
 
+from .aggregate import month_span
 from .parsers import ParseError, Txn, assign_ids, read_file, read_income, read_manual
 
 MASTER_COLUMNS = [
@@ -59,6 +61,49 @@ def dedupe(txns: list[Txn], log) -> list[Txn]:
     if dropped:
         log(f"  deduped {dropped} duplicate row(s) from overlapping exports")
     return kept
+
+
+def add_defaults(txns: list[Txn], default_income: float, default_rent: float,
+                  today: date | None = None) -> list[Txn]:
+    """Synthesize income / Rent-Housing entries for any month that has neither.
+
+    Lets a fresh clone with no data/income.csv or data/manual.csv entries still show
+    a sensible dashboard instead of every month looking like 100% overspending. Applies
+    per month, not all-or-nothing — a month with a real entry is left alone entirely
+    (never topped up or double-counted), so gradually backfilling real data just shrinks
+    which months still show an estimate. Each synthetic row says "Estimated" in its own
+    description, so it's visible for what it is in the category drill-down.
+    """
+    today = today or date.today()
+    dated = [t for t in txns if t.kind in ("spend", "income")]
+    if not dated:
+        return []
+
+    first = min(t.date for t in dated)
+    last = max(max(t.date for t in dated), today)
+
+    have_income = {(t.date.year, t.date.month) for t in txns if t.kind == "income"}
+    have_rent = {(t.date.year, t.date.month) for t in txns
+                 if t.kind == "spend" and t.category == "Rent/Housing"}
+
+    extra: list[Txn] = []
+    for y, m in month_span(first, last):
+        if default_income and (y, m) not in have_income:
+            extra.append(Txn(
+                date=date(y, m, 1),
+                description="Estimated income (edit data/income.csv to replace)",
+                amount=-default_income, account="default", kind="income", category="Income",
+                source_file="(default)", notes="default estimate",
+            ))
+        if default_rent and (y, m) not in have_rent:
+            extra.append(Txn(
+                date=date(y, m, 1),
+                description="Estimated rent (edit data/manual.csv to replace)",
+                amount=default_rent, account="default", kind="spend", category="Rent/Housing",
+                source_file="(default)", notes="default estimate",
+            ))
+    assign_ids(extra)
+    return extra
 
 
 def load_all(data_dir: Path, log) -> list[Txn]:

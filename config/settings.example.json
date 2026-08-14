@@ -1,6 +1,12 @@
 {
-  "_comment_net_worth": "Your total savings/investments as of your ledger's start date. Real personal figure — this file is committed as a template, so it's left at 0. Copy this file to settings.json (gitignored) and set your real number there.",
+  "_comment_setup": "Run `python3 build.py --setup` instead of hand-editing this — it writes config/settings.json (gitignored) interactively and re-run anytime to change these. This file is just the checked-in template/fallback; build.py reads it automatically if settings.json doesn't exist yet, so none of this is required just to get started.",
+
+  "_comment_net_worth": "Your total savings/investments as of your ledger's start date.",
   "net_worth_start": 0,
+
+  "_comment_defaults": "Used only for a month that has zero real entries of that kind — e.g. before you've filled in data/income.csv, or for a month you haven't backfilled yet. A month with any real entry is left alone; these never add to real data, only fill a gap.",
+  "default_monthly_income": 3000,
+  "default_monthly_rent": 1500,
 
   "_comment_categories": "The dashboard shows these, in this order. Rename or reorder freely; every category used in rules.csv must appear here.",
   "categories": [

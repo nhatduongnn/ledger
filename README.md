@@ -14,14 +14,7 @@ from two years of fully synthetic transactions (`data/mock/`) and always shows a
 
 ## Use it with your real data
 
-1. **Bootstrap your local config** (this file holds your real starting net worth, so it's
-   gitignored — the repo only ships a template):
-   ```bash
-   cp config/settings.example.json config/settings.json
-   ```
-   Edit `net_worth_start` in `config/settings.json` to your real number.
-
-2. **Export CSVs from each card** and drop them into:
+1. **Export CSVs from each card** and drop them into:
    ```
    data/raw/capitalone/
    data/raw/chase/
@@ -31,19 +24,37 @@ from two years of fully synthetic transactions (`data/mock/`) and always shows a
    Any filename works. The parser auto-detects which issuer a CSV came from by its
    column headers.
 
-3. **Record your income** in `data/income.csv`:
-   ```csv
-   date,source,amount,notes
-   2026-08-15,Paycheck,2750.00,
-   ```
-   Anything not on a card — rent, cash, Venmo — goes in `data/manual.csv` the same way.
-
-4. **Build it:**
+2. **Build it:**
    ```bash
    python3 build.py
    ```
    Then open `dashboard/index.html` in a browser. Re-run `build.py` any time you add new
    exports; it dedupes automatically across overlapping date ranges.
+
+That's the whole setup — no config file required. Any month with no `data/income.csv`
+entry assumes **$3,000/mo income**; any month with no `Rent/Housing` entry assumes
+**$1,500/mo rent**; net worth starts at **$0**. Assumed numbers are clearly labeled
+("Estimated rent...", "Estimated income...") if you drill into that category in the
+dashboard, so they're never silently mistaken for real data.
+
+To use your real numbers instead of the assumed ones:
+```bash
+python3 build.py --setup
+```
+Prompts for your starting net worth, typical monthly income, and typical monthly rent,
+and writes them to `config/settings.json` (gitignored — never committed). Safe to
+re-run anytime to change them; it shows your current values as the default.
+
+For finer-grained real data — actual paycheck dates/amounts instead of a flat monthly
+assumption, actual rent instead of the flat default — add rows to `data/income.csv` and
+`data/manual.csv` directly:
+```csv
+date,source,amount,notes
+2026-08-15,Paycheck,2750.00,
+```
+A real entry always wins over the assumed default, and only for the month it's dated
+in — so backfilling real data one month at a time works fine, no need to do it all at
+once.
 
 If a merchant lands in "Uncategorized," `build.py` tells you and writes
 `output/uncategorized.csv` — add a line to `config/rules.csv` and re-run.
@@ -59,7 +70,8 @@ application code and the synthetic demo data are tracked in this repo.
 ```
 finance/parsers.py     issuer-specific CSV readers, normalized to one Txn shape
 finance/categorize.py  merchant-name rules (config/rules.csv) + issuer-category fallback
-finance/ledger.py      merges every source, dedupes overlapping exports
+finance/ledger.py      merges every source, dedupes overlapping exports, fills any
+                        month missing income/rent with the assumed default
 finance/aggregate.py   rolls the ledger up into monthly totals + per-transaction detail
 build.py               the CLI — orchestrates the above, writes dashboard/data.js
 dashboard/index.html   the UI — vanilla JS, reads dashboard/data.js, no build step

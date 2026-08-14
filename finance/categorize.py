@@ -29,7 +29,18 @@ class Rules:
 
     @classmethod
     def load(cls, config_dir: Path) -> "Rules":
-        settings = json.loads((config_dir / "settings.json").read_text(encoding="utf-8"))
+        # settings.json is gitignored (it can hold a real net worth figure) and entirely
+        # optional — a fresh clone with none of it set up falls back to
+        # settings.example.json's categories/rules plus these hardcoded numbers, so
+        # `python3 build.py` works with zero setup. `python3 build.py --setup` writes a
+        # real settings.json once someone wants to change them.
+        settings_path = config_dir / "settings.json"
+        if not settings_path.exists():
+            settings_path = config_dir / "settings.example.json"
+        settings = json.loads(settings_path.read_text(encoding="utf-8"))
+        settings.setdefault("net_worth_start", 0)
+        settings.setdefault("default_monthly_income", 3000)
+        settings.setdefault("default_monthly_rent", 1500)
         rules: list[tuple[re.Pattern, str]] = []
         rules_path = config_dir / "rules.csv"
         if rules_path.exists():

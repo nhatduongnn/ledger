@@ -1,7 +1,14 @@
 #!/usr/bin/env python3
 """Build the ledger and the dashboard from your raw CSV exports.
 
+Zero setup required: drop CSVs into data/raw/<issuer>/ and run `python3 build.py`.
+Any month with no data/income.csv entry assumes $3,000/mo income; any month with no
+Rent/Housing entry assumes $1,500/mo rent; net worth starts at $0. Run
+`python3 build.py --setup` anytime to set your real numbers instead (or hand-edit
+data/income.csv / data/manual.csv, which always take priority over the assumed values).
+
     python3 build.py              parse everything, write output/ and dashboard/data.js
+    python3 build.py --setup      interactively set net worth / default income / default rent
     python3 build.py --inspect    just show the header line of every CSV found
     python3 build.py --open       build, then open the dashboard in your browser
     python3 build.py --mock       generate two years of fake data into data/mock/
@@ -15,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import sys
 import webbrowser
 from datetime import date
@@ -22,7 +30,7 @@ from pathlib import Path
 
 from finance.aggregate import build, write_dashboard_data
 from finance.categorize import Rules, categorize
-from finance.ledger import load_all, write_master, write_uncategorized
+from finance.ledger import add_defaults, load_all, write_master, write_uncategorized
 from finance.parsers import detect, ParseError, sniff_rows
 
 ROOT = Path(__file__).resolve().parent
@@ -65,28 +73,29 @@ def inspect() -> int:
     return 0
 
 
-def ensure_settings() -> bool:
-    settings = ROOT / "config" / "settings.json"
-    if settings.exists():
-        return True
-    log("config/settings.json doesn't exist yet (it's gitignored — it can hold your real")
-    log("starting net worth, which config/settings.example.json intentionally doesn't).")
-    log("  cp config/settings.example.json config/settings.json")
-    log("then edit net_worth_start to your real number and re-run.")
-    return False
-
-
 def run(open_browser: bool) -> int:
-    if not ensure_settings():
-        return 1
     rules = Rules.load(ROOT / "config")
     txns = load_all(ROOT / "data", log)
     if not txns:
         log("\nNothing to build yet — no transactions found.")
         log("  1. export CSVs from each card into data/raw/<issuer>/")
-        log("  2. record your paychecks in data/income.csv")
-        log("  3. re-run: python3 build.py")
+        log("  2. re-run: python3 build.py")
+        log("(income and rent default to $3,000/mo and $1,500/mo until you set real")
+        log(" numbers — record real ones in data/income.csv / data/manual.csv, or run")
+        log(" python3 build.py --setup to change the assumed defaults.)")
         return 1
+
+    default_income = rules.settings.get("default_monthly_income", 3000)
+    default_rent = rules.settings.get("default_monthly_rent", 1500)
+    extra = add_defaults(txns, default_income, default_rent)
+    if extra:
+        n_income = sum(1 for t in extra if t.kind == "income")
+        n_rent = sum(1 for t in extra if t.category == "Rent/Housing")
+        if n_income:
+            log(f"  no data/income.csv entry for {n_income} month(s) — assumed ${default_income:,.0f}/mo")
+        if n_rent:
+            log(f"  no Rent/Housing entry for {n_rent} month(s) — assumed ${default_rent:,.0f}/mo")
+        txns += extra
 
     categorize(txns, rules)
 
@@ -117,6 +126,47 @@ def run(open_browser: bool) -> int:
     log(f"\nDashboard: {index}")
     if open_browser:
         webbrowser.open(index.as_uri())
+    return 0
+
+
+def setup() -> int:
+    """Interactively write config/settings.json — net worth, default income, default rent.
+
+    Optional. Without it, build.py falls back to config/settings.example.json's
+    categories/rules plus $0 net worth, $3,000/mo income, $1,500/mo rent. Safe to
+    re-run anytime — it starts from your current values (or those defaults) and only
+    changes what you actually answer.
+    """
+    path = ROOT / "config" / "settings.json"
+    example = ROOT / "config" / "settings.example.json"
+    base = json.loads((path if path.exists() else example).read_text(encoding="utf-8"))
+    base.setdefault("net_worth_start", 0)
+    base.setdefault("default_monthly_income", 3000)
+    base.setdefault("default_monthly_rent", 1500)
+
+    def ask(prompt: str, current: float) -> float:
+        raw = input(f"{prompt} [{current:g}]: ").strip()
+        if not raw:
+            return current
+        try:
+            return float(raw.replace(",", "").replace("$", ""))
+        except ValueError:
+            log(f"  didn't understand {raw!r}, keeping {current:g}")
+            return current
+
+    log("Press enter to keep the current value shown in [brackets].\n")
+    base["net_worth_start"] = ask(
+        "Starting net worth / savings balance (as of when your card history begins)",
+        base["net_worth_start"])
+    base["default_monthly_income"] = ask(
+        "Typical monthly take-home income (used only for a month with no real data/income.csv entry)",
+        base["default_monthly_income"])
+    base["default_monthly_rent"] = ask(
+        "Typical monthly rent/housing cost (used only for a month with no real Rent/Housing entry)",
+        base["default_monthly_rent"])
+
+    path.write_text(json.dumps(base, indent=2) + "\n", encoding="utf-8")
+    log(f"\nWrote {path.relative_to(ROOT)}. Run python3 build.py --setup again anytime to change these.")
     return 0
 
 
@@ -246,12 +296,15 @@ def mock_build(open_browser: bool) -> int:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--setup", action="store_true", help="interactively set net worth / default income / default rent")
     ap.add_argument("--inspect", action="store_true", help="show the columns of every CSV under data/raw/")
     ap.add_argument("--mock", action="store_true", help="write two years of fake CSVs to data/mock/")
     ap.add_argument("--mock-build", action="store_true", help="build dashboard/demo.html's data from data/mock/")
     ap.add_argument("--open", action="store_true", help="open the dashboard when done")
     a = ap.parse_args()
 
+    if a.setup:
+        return setup()
     if a.inspect:
         return inspect()
     if a.mock:
