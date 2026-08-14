@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ledger — Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  html, body { margin:0; padding:0; background:#14161a; }
+  body {
+    font-family:'Archivo', system-ui, -apple-system, sans-serif;
+    color:#e8e9ec;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  ::selection { background:rgba(201,142,232,0.3); }
+  button { font-family:inherit; }
+
+  .wrap { max-width:1120px; margin:0 auto; padding:48px 40px 80px; }
+
+  header.top { display:flex; align-items:flex-end; justify-content:space-between; gap:24px; margin-bottom:40px; }
+  .eyebrow { font-size:12px; letter-spacing:0.18em; text-transform:uppercase; color:#8a8f9a; font-weight:600; margin-bottom:8px; }
+  h1.title { margin:0; font-size:34px; font-weight:700; letter-spacing:0.02em; color:#f4f5f7; }
+  .stamp { font-size:11px; color:#5f646e; margin-top:6px; }
+
+  nav.tabs { display:flex; gap:4px; background:#1b1e24; border:1px solid #262a32; border-radius:10px; padding:4px; }
+  nav.tabs button {
+    border:none; cursor:pointer; padding:9px 20px; border-radius:7px;
+    font-size:14px; font-weight:600; background:transparent; color:#8a8f9a;
+    transition:background 0.15s, color 0.15s;
+  }
+  nav.tabs button.on { background:#2a2f38; color:#f4f5f7; }
+
+  .card { background:#1b1e24; border:1px solid #262a32; border-radius:14px; padding:26px 28px; }
+  .card.accent { background:#1f1b26; border-color:rgba(201,142,232,0.28); }
+  .card-title { font-size:14px; font-weight:700; color:#f4f5f7; margin-bottom:4px; }
+  .card-sub { font-size:12px; color:#8a8f9a; }
+
+  .stat-label { font-size:12px; letter-spacing:0.14em; text-transform:uppercase; color:#8a8f9a; font-weight:600; }
+  .stat-label.accent { color:#c98ee8; }
+  .stat-value { font-size:34px; font-weight:700; letter-spacing:-0.02em; color:#f4f5f7; margin-top:12px; font-variant-numeric:tabular-nums; }
+  .stat-value.accent { color:#e6cdf5; }
+  .stat-delta { font-size:13px; margin-top:6px; font-variant-numeric:tabular-nums; color:#8a8f9a; }
+  .up { color:#e08a8a; } .down { color:#7fc9a4; } .muted { color:#8a8f9a; }
+
+  .grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:16px; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+  .split { display:grid; grid-template-columns:1.6fr 1fr; gap:16px; }
+  .col { display:flex; flex-direction:column; gap:16px; }
+
+  .monthbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; }
+  .monthnav { display:flex; align-items:center; gap:14px; }
+  .arrow {
+    width:34px; height:34px; border-radius:8px; border:1px solid #262a32;
+    background:#1b1e24; color:#b9bdc6; cursor:pointer; font-size:15px; line-height:1;
+  }
+  .arrow:disabled { color:#3a3f4b; cursor:default; }
+  .month-info { width:160px; }
+  .month-label { font-size:20px; font-weight:700; color:#f4f5f7; letter-spacing:0.01em; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .month-sub { font-size:12px; color:#8a8f9a; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .live { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:600; color:#c98ee8; letter-spacing:0.1em; text-transform:uppercase; }
+  .live i { width:7px; height:7px; border-radius:50%; background:#c98ee8; display:inline-block; }
+
+  .catrows { display:flex; flex-direction:column; gap:2px; margin:0 -10px; }
+  .catrow {
+    display:grid; grid-template-columns:130px 1fr 76px 16px; gap:14px; align-items:center;
+    padding:8px 10px; margin:0; border-radius:8px; cursor:pointer; border:none; background:transparent;
+    width:100%; text-align:left; font-family:inherit; transition:background 0.12s;
+  }
+  .catrow:hover, .catrow:focus-visible { background:#20242b; }
+  .catrow:focus-visible { outline:2px solid #c98ee8; outline-offset:-2px; }
+  .catrow .n { font-size:13px; color:#b9bdc6; }
+  .track { height:8px; border-radius:4px; background:#252932; overflow:hidden; }
+  .track > div { height:100%; border-radius:4px; }
+  .catrow .a { font-size:13px; color:#e8e9ec; text-align:right; font-variant-numeric:tabular-nums; }
+  .catrow .chev { font-size:15px; color:#4a4f5a; text-align:center; transition:color 0.12s; }
+  .catrow:hover .chev, .catrow:focus-visible .chev { color:#8a8f9a; }
+
+  .back-link {
+    display:inline-flex; align-items:center; gap:6px; border:none; background:transparent;
+    color:#8a8f9a; font-size:13px; font-weight:600; cursor:pointer; padding:6px 2px; margin-bottom:18px;
+  }
+  .back-link:hover, .back-link:focus-visible { color:#f4f5f7; }
+  .back-link:focus-visible { outline:2px solid #c98ee8; outline-offset:2px; border-radius:4px; }
+
+  .drill-head { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:20px; }
+  .drill-title { font-size:22px; font-weight:700; color:#f4f5f7; letter-spacing:-0.01em; }
+  .drill-sub { font-size:12px; color:#8a8f9a; margin-top:4px; }
+  .drill-total { font-size:24px; font-weight:700; color:#f4f5f7; font-variant-numeric:tabular-nums; }
+
+  .txnrows { display:flex; flex-direction:column; }
+  .txnrow {
+    display:grid; grid-template-columns:64px 1fr auto; gap:14px; align-items:center;
+    padding:12px 0; border-bottom:1px solid #21242b;
+  }
+  .txnrow:last-child { border-bottom:none; }
+  .txn-date { font-size:12px; color:#8a8f9a; font-variant-numeric:tabular-nums; }
+  .txn-merchant { font-size:13px; color:#e8e9ec; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .txn-acct { font-size:10px; letter-spacing:0.06em; text-transform:uppercase; color:#6b7079; margin-left:8px; }
+  .txn-amt { font-size:13px; color:#e8e9ec; text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .txn-amt.neg { color:#7fc9a4; }
+
+  .ring-row { display:flex; align-items:center; gap:20px; }
+  .ring-pct { font-size:30px; font-weight:700; color:#f4f5f7; font-variant-numeric:tabular-nums; letter-spacing:-0.02em; }
+
+  .chips { display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+  .chip {
+    border:1px solid #2a2f38; background:transparent; color:#8a8f9a;
+    border-radius:999px; padding:6px 14px; font-size:12px; font-weight:600; cursor:pointer;
+  }
+  .chip.on { border-color:rgba(201,142,232,0.5); background:rgba(201,142,232,0.14); color:#dbb0f2; }
+
+  .rowhead { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+  .empty { padding:60px 28px; text-align:center; color:#8a8f9a; font-size:14px; line-height:1.7; }
+  .empty code { color:#dbb0f2; background:#1f1b26; padding:2px 6px; border-radius:4px; font-size:13px; }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+
+<script src="./mock-data.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  var C = {
+    accent: "#c98ee8", accentSoft: "#4a4356", green: "#7fc9a4", red: "#e08a8a",
+    card: "#1b1e24", track: "#252932", bar: "#3a3f4b", sub: "#b9bdc6", mute: "#8a8f9a"
+  };
+
+  var D = window.FINANCE_DATA || null;
+
+  var ACCOUNTS = { capitalone: "Capital One", chase: "Chase", discover: "Discover", bank: "Bank", manual: "Manual" };
+
+  var state = {
+    tab: "month",
+    monthIdx: -1,
+    cat: null,
+    window: 12,         // months shown in the Compare view
+    drill: null          // category name currently drilled into, on the This month tab
+  };
+
+  /* ---------- helpers ---------- */
+
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  }
+  function fmt(n) { return "$" + Math.round(n).toLocaleString("en-US"); }
+  function fmtK(n) {
+    var a = Math.abs(n);
+    if (a >= 10000) return (n < 0 ? "-$" : "$") + (a / 1000).toFixed(1) + "k";
+    return fmt(n);
+  }
+  function signed(n) { return (n >= 0 ? "+$" : "−$") + Math.abs(Math.round(n)).toLocaleString("en-US"); }
+  function fmtSigned(n) { return (n < 0 ? "−$" : "$") + Math.abs(Math.round(n)).toLocaleString("en-US"); }
+  function total(m) {
+    var s = 0;
+    for (var k in m.spend) s += m.spend[k];
+    return s;
+  }
+  function rateOf(m) {
+    if (!m.income) return 0;
+    return (m.income - total(m)) / m.income;
+  }
+  var MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  function fmtDate(iso) {
+    var p = iso.split("-");
+    return MONTH_ABBR[parseInt(p[1], 10) - 1] + " " + parseInt(p[2], 10);
+  }
+  // "Sep '25" -> {main:"Sep", sub:"'25"}; "Aug" -> {main:"Aug", sub:null}. Splitting the
+  // year onto its own line keeps x-axis labels from running together in dense charts.
+  function splitMonthLabel(short) {
+    var i = short.indexOf(" '");
+    if (i === -1) return { main: short, sub: null };
+    return { main: short.slice(0, i), sub: short.slice(i + 1) };
+  }
+
+  /* ---------- svg builders (ported from the Design Code component) ---------- */
+
+  function svgOpen(w, h) {
+    return '<svg viewBox="0 0 ' + w + ' ' + h + '" style="width:100%;height:auto;display:block" xmlns="http://www.w3.org/2000/svg">';
+  }
+  function txt(x, y, fill, size, weight, s, extra) {
+    return '<text x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" text-anchor="middle" fill="' + fill +
+      '" font-size="' + size + '" font-weight="' + weight + '" font-family="Archivo, sans-serif"' + (extra ? " " + extra : "") + '>' + esc(s) + '</text>';
+  }
+
+  // Keeps axis labels legible once the series runs to 12 or 24 points.
+  function stride(n, maxLabels) { return Math.max(1, Math.ceil(n / maxLabels)); }
+
+  function svgLine(pts, w, h, color, o) {
+    if (!pts.length) return "";
+    var n = pts.length;
+    var xs = pts.map(function (_, i) { return n === 1 ? w / 2 : 20 + i * ((w - 40) / (n - 1)); });
+    var dataMin = Math.min.apply(null, pts);
+    var dataMax = Math.max.apply(null, pts);
+    // includeZero: the series can go negative (saved $, savings rate), so the floor is
+    // whatever's lower — 0 or the actual min — instead of assuming everything is >= 0.
+    var min = o.min !== undefined ? o.min : (o.includeZero ? Math.min(0, dataMin) : dataMin);
+    var max = o.max !== undefined ? o.max : (o.includeZero ? Math.max(0, dataMax) : dataMax);
+    var span = (max - min) || 1;
+    // Bottom margin is 40 (not the usual 26) to leave room for a two-line x-axis
+    // label ("Sep" / "'25") instead of cramming both onto one line.
+    function valueToY(v) { return h - 40 - ((v - min) / span) * (h - 60); }
+    var ys = pts.map(valueToY);
+    var d = xs.map(function (x, i) { return (i ? "L" : "M") + x.toFixed(1) + " " + ys[i].toFixed(1); }).join(" ");
+
+    var s = svgOpen(w, h);
+    if (o.area) {
+      // Close the fill at the zero line (not the chart floor) so a month that dips
+      // negative reads as a dip below zero, not as part of one big positive area.
+      var baseline = o.includeZero ? valueToY(0) : h - 40;
+      s += '<path d="' + d + " L" + xs[n - 1].toFixed(1) + " " + baseline.toFixed(1) + " L" + xs[0].toFixed(1) + " " + baseline.toFixed(1) +
+        ' Z" fill="' + color + '" opacity="0.12"/>';
+    }
+    s += '<path d="' + d + '" fill="none" stroke="' + color + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+
+    if (o.includeZero && min < 0) {
+      var zy = valueToY(0);
+      s += '<line x1="20" y1="' + zy.toFixed(1) + '" x2="' + (w - 20) + '" y2="' + zy.toFixed(1) +
+        '" stroke="' + C.mute + '" stroke-width="1" stroke-dasharray="3,3" opacity="0.5"/>';
+    }
+
+    var valEvery = stride(n, 8);
+    var labEvery = stride(n, 12);
+    var label = o.labelFn || fmt;
+
+    pts.forEach(function (p, i) {
+      var last = i === n - 1;
+      var neg = p < 0;
+      var dotColor = neg ? C.red : color;
+      var defR = n > 14 ? 2.2 : 3;
+      var defFill = last ? dotColor : C.card;
+      var showLabel = last || i % valEvery === 0;
+      var labelColor = neg ? C.red : C.sub;
+
+      if (o.hoverPoints) {
+        // A generous invisible hit-circle sits on top so the dot is easy to hover even
+        // though its visible radius is only 2-3px; hovering fills the dot in and pops
+        // the number, and also reveals the value for points that are normally hidden.
+        s += '<g class="pt-group">' +
+          '<circle class="pt-dot" cx="' + xs[i].toFixed(1) + '" cy="' + ys[i].toFixed(1) + '" r="' + defR +
+          '" fill="' + defFill + '" stroke="' + dotColor + '" stroke-width="1.5" data-default-fill="' + defFill +
+          '" data-hover-fill="' + dotColor + '" data-default-r="' + defR + '" data-hover-r="' + (defR + 1.5) + '"/>' +
+          txt(xs[i], ys[i] - 10, labelColor, 11, 400, label(p),
+            'class="pt-label" opacity="' + (showLabel ? 1 : 0) + '" data-default-opacity="' + (showLabel ? 1 : 0) + '"') +
+          '<circle class="pt-hit" cx="' + xs[i].toFixed(1) + '" cy="' + ys[i].toFixed(1) + '" r="10" fill="transparent" style="cursor:pointer"/>' +
+          "</g>";
+      } else {
+        s += '<circle cx="' + xs[i].toFixed(1) + '" cy="' + ys[i].toFixed(1) + '" r="' + defR +
+          '" fill="' + defFill + '" stroke="' + dotColor + '" stroke-width="1.5"/>';
+        if (showLabel) s += txt(xs[i], ys[i] - 10, labelColor, 11, 400, label(p));
+      }
+
+      if (last || i % labEvery === 0) {
+        var lbl = splitMonthLabel(o.months[i]);
+        s += txt(xs[i], h - 22, C.mute, 11, 400, lbl.main);
+        if (lbl.sub) s += txt(xs[i], h - 8, C.mute, 11, 400, lbl.sub);
+      }
+    });
+    return s + "</svg>";
+  }
+
+  function svgBars(pts, w, h, months, currentIdx, o) {
+    if (!pts.length) return "";
+    o = o || {};
+    var n = pts.length;
+    var max = Math.max.apply(null, pts) || 1;
+    var bw = (w - 40) / n;
+    var valEvery = stride(n, 8);
+    var labEvery = stride(n, 12);
+    var s = svgOpen(w, h);
+    // Set for "Spending by month" and "Category trend" — enables hover-highlight and
+    // double-click. drillCat (category trend only) makes the double-click open that
+    // category's breakdown for the clicked month, instead of just the month overview.
+    var hoverable = o.monthIdxOffset !== undefined;
+    // topPad/bottomPad reserve headroom for the value label above each bar and the
+    // two-line month label below it. Overridable because a chart whose text renders
+    // larger (see textClass/cat-axis-text) needs proportionally more of both, or the
+    // bigger text just crowds into the same fixed space and looks cramped.
+    var topPad = o.topPad || 24;
+    var bottomPad = o.bottomPad || 40;
+    var mainOffset = o.mainOffset || 22;
+    var subOffset = o.subOffset || 8;
+
+    pts.forEach(function (p, i) {
+      var bh = (p / max) * (h - topPad - bottomPad);
+      var x = 20 + i * bw + bw * 0.18;
+      var y = h - bottomPad - bh;
+      var cur = i === currentIdx;
+      var defFill = cur ? C.accent : C.bar;
+      var rectAttrs = hoverable
+        ? ' class="bar-visible" data-default-fill="' + defFill + '" data-hover-fill="' + C.accent + '"'
+        : "";
+
+      if (hoverable) {
+        var tip = o.drillCat ? "Double-click for " + o.drillCat + " in " + months[i] : "Double-click to view " + months[i];
+        s += '<g class="bar-group" data-bar-idx="' + i + '" data-month-idx="' + (o.monthIdxOffset + i) + '"' +
+          (o.drillCat ? ' data-drill-cat="' + esc(o.drillCat) + '"' : "") + '><title>' + esc(tip) + '</title>';
+      }
+
+      var textExtra = o.textClass ? 'class="' + o.textClass + '"' : undefined;
+      s += '<rect' + rectAttrs + ' x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + (bw * 0.64).toFixed(1) +
+        '" height="' + Math.max(0, bh).toFixed(1) + '" rx="5" fill="' + defFill + '"/>';
+      if (cur || i % valEvery === 0) s += txt(x + bw * 0.32, y - 8, C.sub, 11, 400, n > 8 ? fmtK(p) : fmt(p), textExtra);
+      if (cur || i % labEvery === 0) {
+        var lbl = splitMonthLabel(months[i]);
+        var lc = cur ? C.accent : C.mute, lw = cur ? 600 : 400;
+        s += txt(x + bw * 0.32, h - mainOffset, lc, 11, lw, lbl.main, textExtra);
+        if (lbl.sub) s += txt(x + bw * 0.32, h - subOffset, lc, 11, lw, lbl.sub, textExtra);
+      }
+      if (hoverable) {
+        s += '<rect class="bar-hit" x="' + (20 + i * bw).toFixed(1) + '" y="20" width="' + bw.toFixed(1) + '" height="' + (h - 20 - bottomPad).toFixed(1) +
+          '" fill="transparent" style="cursor:pointer"/></g>';
+      }
+    });
+    return s + "</svg>";
+  }
+
+  function ring(rate) {
+    var r = 34, circ = 2 * Math.PI * r;
+    var frac = Math.max(0, Math.min(1, rate));
+    return '<svg viewBox="0 0 84 84" style="width:84px;height:84px;flex-shrink:0" xmlns="http://www.w3.org/2000/svg">' +
+      '<circle cx="42" cy="42" r="' + r + '" fill="none" stroke="' + C.track + '" stroke-width="8"/>' +
+      '<circle cx="42" cy="42" r="' + r + '" fill="none" stroke="' + C.accent + '" stroke-width="8" stroke-linecap="round"' +
+      ' stroke-dasharray="' + circ.toFixed(2) + '" stroke-dashoffset="' + (circ * (1 - frac)).toFixed(2) + '"' +
+      ' transform="rotate(-90 42 42)"/></svg>';
+  }
+
+  /* ---------- views ---------- */
+
+  function header() {
+    var stamp = D && D.generatedAt ? '<div class="stamp">Built ' + esc(D.generatedAt) + "</div>" : "";
+    return '<header class="top">' +
+      '<div><div class="eyebrow">Personal finance</div>' +
+      '<h1 class="title">Ledger <span style="font-size:12px;font-weight:700;letter-spacing:0.08em;' +
+      'text-transform:uppercase;color:#c98ee8;background:rgba(201,142,232,0.14);' +
+      'border:1px solid rgba(201,142,232,0.4);border-radius:999px;padding:4px 10px;' +
+      'vertical-align:middle;margin-left:10px">Demo data</span></h1>' + stamp + "</div>" +
+      '<nav class="tabs">' +
+      '<button data-act="tab" data-val="month" class="' + (state.tab === "month" ? "on" : "") + '">This month</button>' +
+      '<button data-act="tab" data-val="compare" class="' + (state.tab === "compare" ? "on" : "") + '">Compare</button>' +
+      "</nav></header>";
+  }
+
+  function drillView(m) {
+    var rows = (D.txns || []).filter(function (t) { return t.m === m.key && t.c === state.drill; });
+    var drillTotal = rows.reduce(function (s, t) { return s + t.a; }, 0);
+
+    var rowsHtml = rows.length
+      ? rows.map(function (t) {
+          var neg = t.a < 0;
+          return '<div class="txnrow"><div class="txn-date">' + fmtDate(t.d) + "</div>" +
+            '<div class="txn-merchant">' + esc(t.n) +
+            '<span class="txn-acct">' + esc(ACCOUNTS[t.acct] || t.acct) + "</span></div>" +
+            '<div class="txn-amt' + (neg ? " neg" : "") + '">' + (neg ? "−" : "") + fmt(Math.abs(t.a)) + "</div></div>";
+        }).join("")
+      : '<div class="card-sub">No transactions found.</div>';
+
+    return "<section>" +
+      '<button type="button" class="back-link" data-act="closedrill">&#8592; Back to ' + esc(m.label) + "</button>" +
+      '<div class="drill-head"><div><div class="drill-title">' + esc(state.drill) + "</div>" +
+      '<div class="drill-sub">' + esc(m.label) + " &middot; " + rows.length +
+      (rows.length === 1 ? " transaction" : " transactions") + "</div></div>" +
+      '<div class="drill-total">' + fmt(drillTotal) + "</div></div>" +
+      '<div class="card"><div class="txnrows">' + rowsHtml + "</div></div></section>";
+  }
+
+  function monthView() {
+    var M = D.months;
+    var idx = state.monthIdx < 0 ? M.length - 1 : state.monthIdx;
+    var m = M[idx], prev = M[idx - 1];
+    if (state.drill) return drillView(m);
+    var spend = total(m), saved = m.income - spend, rate = rateOf(m);
+    var maxCat = Math.max.apply(null, Object.values(m.spend).concat([0]));
+
+    var rows = D.cats.map(function (name) {
+      var v = m.spend[name] || 0;
+      return { name: name, v: v };
+    }).filter(function (r) { return r.v > 0; })
+      .sort(function (a, b) { return b.v - a.v; });
+
+    var catHtml = rows.length
+      ? rows.map(function (r) {
+          return '<button type="button" class="catrow" data-act="drill" data-val="' + esc(r.name) + '">' +
+            '<div class="n">' + esc(r.name) + "</div>" +
+            '<div class="track"><div style="width:' + (maxCat ? (r.v / maxCat) * 100 : 0).toFixed(1) + "%;background:" +
+            (r.v === maxCat ? C.accent : C.accentSoft) + '"></div></div>' +
+            '<div class="a">' + fmt(r.v) + '</div>' +
+            '<div class="chev">&#8250;</div></button>';
+        }).join("")
+      : '<div class="card-sub">No spending recorded for this month.</div>';
+
+    // Spent delta vs previous month — suppressed for an in-progress month.
+    var delta = "", deltaCls = "muted";
+    if (m.current) {
+      delta = "day " + m.dayOfMonth + " of " + m.daysInMonth;
+    } else if (prev) {
+      var diff = spend - total(prev);
+      delta = signed(diff) + " vs " + prev.short;
+      deltaCls = diff > 0 ? "up" : "down";
+    }
+
+    var rateDelta = "&nbsp;", rateCls = "down";
+    if (prev) {
+      var pr = rateOf(prev);
+      rateDelta = ((rate - pr) >= 0 ? "+" : "−") + Math.abs(Math.round((rate - pr) * 100)) + " pts vs " + prev.short;
+      rateCls = rate < pr ? "up" : "down";
+    }
+
+    var pace = "";
+    if (m.current) {
+      pace = '<div class="card" style="padding:22px 28px">' +
+        '<div class="card-title" style="margin-bottom:6px">Month progress</div>' +
+        '<div class="card-sub" style="margin-bottom:14px">' +
+        Math.round((m.dayOfMonth / m.daysInMonth) * 100) + "% through the month, " +
+        (m.income ? Math.round((spend / m.income) * 100) : 0) + "% of income spent</div>" +
+        '<div class="track" style="height:6px"><div style="width:' +
+        ((m.dayOfMonth / m.daysInMonth) * 100).toFixed(0) + "%;background:" + C.accent + '"></div></div></div>';
+    }
+
+    return '<section>' +
+      '<div class="monthbar"><div class="monthnav">' +
+      '<button class="arrow" data-act="month" data-val="' + (idx - 1) + '" ' + (idx === 0 ? "disabled" : "") + ">&#8592;</button>" +
+      '<div class="month-info"><div class="month-label">' + esc(m.label) + "</div>" +
+      '<div class="month-sub">' + (m.current ? "In progress — through " + esc(m.short) + " " + m.dayOfMonth : "Closed month") + "</div></div>" +
+      '<button class="arrow" data-act="month" data-val="' + (idx + 1) + '" ' + (idx === M.length - 1 ? "disabled" : "") + ">&#8594;</button>" +
+      "</div>" + (m.current ? '<div class="live"><i></i>Live</div>' : "") + "</div>" +
+
+      '<div class="grid3">' +
+      '<div class="card"><div class="stat-label">Income</div><div class="stat-value">' + fmt(m.income) + "</div></div>" +
+      '<div class="card"><div class="stat-label">Spent</div><div class="stat-value">' + fmt(spend) + "</div>" +
+      '<div class="stat-delta ' + deltaCls + '">' + delta + "</div></div>" +
+      '<div class="card accent"><div class="stat-label accent">Saved</div><div class="stat-value accent">' + fmt(saved) + "</div>" +
+      '<div class="stat-delta" style="color:#a985c2">' + Math.round(rate * 100) + "% of income</div></div>" +
+      "</div>" +
+
+      '<div class="split">' +
+      '<div class="card"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:22px">' +
+      '<div class="card-title" style="margin:0">Spending by category</div>' +
+      '<div class="card-sub" style="font-variant-numeric:tabular-nums">' + fmt(spend) + " total</div></div>" +
+      '<div class="catrows">' + catHtml + "</div></div>" +
+
+      '<div class="col"><div class="card" style="flex:1">' +
+      '<div class="card-title" style="margin-bottom:6px">Savings rate</div>' +
+      '<div class="card-sub" style="margin-bottom:18px">' + (m.current ? "So far this month" : esc(m.label)) + "</div>" +
+      '<div class="ring-row">' + ring(rate) +
+      '<div><div class="ring-pct">' + Math.round(rate * 100) + "%</div>" +
+      '<div class="stat-delta ' + rateCls + '" style="margin-top:4px">' + rateDelta + "</div></div></div></div>" +
+      pace + "</div></div></section>";
+  }
+
+  function compareView() {
+    var all = D.months;
+    var w = state.window === 0 ? all.length : Math.min(state.window, all.length);
+    var M = all.slice(all.length - w);
+    var months = M.map(function (x) { return x.short; });
+
+    var spendSeries = M.map(total);
+    var savedSeries = M.map(function (x) { return x.income - total(x); });
+    var rateSeries = M.map(function (x) { return rateOf(x) * 100; });
+
+    // Net worth walks the full history, then we slice to the visible window.
+    var acc = D.netWorthStart;
+    var nwAll = all.map(function (x) { return (acc += x.income - total(x)); });
+    var nwSeries = nwAll.slice(all.length - w);
+
+    if (!state.cat || D.cats.indexOf(state.cat) === -1) state.cat = D.cats[0];
+    var catSeries = M.map(function (x) { return x.spend[state.cat] || 0; });
+
+    var opts = [6, 12, 24, 0];
+    var winHtml = opts.map(function (o) {
+      if (o !== 0 && o > all.length) return "";
+      return '<button class="chip ' + (state.window === o ? "on" : "") + '" data-act="win" data-val="' + o + '">' +
+        (o === 0 ? "All" : o + "M") + "</button>";
+    }).join("");
+
+    var chips = D.cats.map(function (name) {
+      return '<button class="chip ' + (name === state.cat ? "on" : "") + '" data-act="cat" data-val="' + esc(name) + '">' + esc(name) + "</button>";
+    }).join("");
+
+    var label = w <= 12 ? "last " + w + " months" : "last " + w + " months";
+
+    return "<section>" +
+      '<div style="display:flex;justify-content:flex-end;margin-bottom:16px"><div class="chips">' + winHtml + "</div></div>" +
+
+      '<div class="grid2">' +
+      '<div class="card"><div class="card-title">Spending by month</div>' +
+      '<div class="card-sub" style="margin-bottom:20px">Total outgoing, ' + label + "</div>" +
+      svgBars(spendSeries, 520, 220, months, M.length - 1, { monthIdxOffset: all.length - w }) + "</div>" +
+      '<div class="card"><div class="card-title">Savings by month</div>' +
+      '<div class="card-sub" style="margin-bottom:20px">Income minus spending</div>' +
+      svgLine(savedSeries, 520, 220, C.accent, { area: true, months: months, includeZero: true, hoverPoints: true, labelFn: fmtSigned }) + "</div>" +
+      "</div>" +
+
+      '<div class="grid2">' +
+      '<div class="card"><div class="card-title">Savings rate trend</div>' +
+      '<div class="card-sub" style="margin-bottom:20px">Share of income saved</div>' +
+      svgLine(rateSeries, 520, 200, C.green, { months: months, includeZero: true, hoverPoints: true, labelFn: function (v) { return Math.round(v) + "%"; } }) + "</div>" +
+      '<div class="card"><div class="card-title">Net worth</div>' +
+      '<div class="card-sub" style="margin-bottom:20px">Cumulative savings on ' + fmt(D.netWorthStart) + " starting balance</div>" +
+      svgLine(nwSeries, 520, 200, C.accent, { area: true, months: months, hoverPoints: true, labelFn: function (v) { return "$" + (v / 1000).toFixed(1) + "k"; } }) + "</div>" +
+      "</div>" +
+
+      '<div class="card"><div class="rowhead">' +
+      '<div><div class="card-title">Category trend</div><div class="card-sub">Monthly spend per category</div></div>' +
+      '<div class="chips">' + chips + "</div></div>" +
+      svgBars(catSeries, 1060, 300, months, M.length - 1, { monthIdxOffset: all.length - w, drillCat: state.cat }) + "</div></section>";
+  }
+
+  function emptyState(msg) {
+    return '<div class="card empty">' + msg + "</div>";
+  }
+
+  function render() {
+    var app = document.getElementById("app");
+    var body;
+    if (!D || !D.months || !D.months.length) {
+      body = emptyState(
+        "No ledger data yet.<br><br>Drop your card exports into <code>data/raw/&lt;issuer&gt;/</code>, " +
+        "fill in <code>data/income.csv</code>, then run:<br><br><code>python3 build.py</code>"
+      );
+    } else {
+      body = state.tab === "month" ? monthView() : compareView();
+    }
+    app.innerHTML = header() + body;
+  }
+
+  document.addEventListener("click", function (ev) {
+    var el = ev.target.closest("[data-act]");
+    if (!el) return;
+    var act = el.getAttribute("data-act"), val = el.getAttribute("data-val");
+    if (act === "tab") { state.tab = val; state.drill = null; }
+    else if (act === "month") { state.monthIdx = Math.max(0, Math.min(D.months.length - 1, parseInt(val, 10))); state.drill = null; }
+    else if (act === "cat") state.cat = val;
+    else if (act === "win") state.window = parseInt(val, 10);
+    else if (act === "drill") state.drill = val;
+    else if (act === "closedrill") state.drill = null;
+    render();
+  });
+
+  document.addEventListener("dblclick", function (ev) {
+    var bar = ev.target.closest(".bar-group[data-month-idx]");
+    if (!bar) return;
+    state.tab = "month";
+    state.monthIdx = parseInt(bar.getAttribute("data-month-idx"), 10);
+    state.drill = bar.hasAttribute("data-drill-cat") ? bar.getAttribute("data-drill-cat") : null;
+    render();
+  });
+
+  // Chart hover — direct DOM patching (fill/size/opacity attributes), not a full
+  // render(), so it stays cheap and doesn't disturb any other UI state.
+  function setBarGroupFill(svg, hoveredIdx) {
+    svg.querySelectorAll(".bar-visible").forEach(function (r) {
+      var g = r.closest(".bar-group");
+      if (hoveredIdx === null) r.setAttribute("fill", r.getAttribute("data-default-fill"));
+      else r.setAttribute("fill", g.getAttribute("data-bar-idx") === hoveredIdx ? r.getAttribute("data-hover-fill") : C.bar);
+    });
+  }
+  function setPointHover(g, hovered) {
+    var dot = g.querySelector(".pt-dot"), label = g.querySelector(".pt-label");
+    if (dot) {
+      dot.setAttribute("fill", dot.getAttribute(hovered ? "data-hover-fill" : "data-default-fill"));
+      dot.setAttribute("r", dot.getAttribute(hovered ? "data-hover-r" : "data-default-r"));
+    }
+    if (label) {
+      label.setAttribute("opacity", hovered ? "1" : label.getAttribute("data-default-opacity"));
+      label.setAttribute("font-size", hovered ? "14" : "11");
+      label.setAttribute("font-weight", hovered ? "700" : "400");
+    }
+  }
+
+  document.addEventListener("mouseover", function (ev) {
+    var pt = ev.target.closest(".pt-group");
+    if (pt) { setPointHover(pt, true); return; }
+    var bar = ev.target.closest(".bar-group");
+    if (bar) setBarGroupFill(bar.closest("svg"), bar.getAttribute("data-bar-idx"));
+  });
+  document.addEventListener("mouseout", function (ev) {
+    var to = ev.relatedTarget;
+    var pt = ev.target.closest(".pt-group");
+    if (pt) {
+      if (to && pt.contains(to)) return;
+      setPointHover(pt, false);
+      return;
+    }
+    var bar = ev.target.closest(".bar-group");
+    if (bar) {
+      if (to && bar.contains(to)) return;
+      if (to && to.closest && to.closest(".bar-group[data-bar-idx]")) return; // the new bar's own mouseover handles it
+      setBarGroupFill(bar.closest("svg"), null);
+    }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

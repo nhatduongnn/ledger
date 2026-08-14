@@ -1,0 +1,16 @@
+# Real financial data — never commit. See README.md for the mock/demo setup that
+# ships instead, so this repo is safe to make public without exposing anything real.
+/data/raw/
+/data/income.csv
+/data/manual.csv
+/config/settings.json
+/dashboard/data.js
+
+# Generated output — regenerate anytime with build.py / build.py --mock-build
+/output/
+
+# OS / editor / Python
+.DS_Store
+__pycache__/
+*.pyc
+.claude/
